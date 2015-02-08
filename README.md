@@ -14,7 +14,7 @@ couple of resizing options you can select such as the
 resizing method and whether to scale styles or not. It does not alter your original
 document in any way.
 
-Images are saved to _drawable-ldpi_, _drawable-mdpi_, _drawable-hdpi_, and _drawable-xhdpi_
+Images are saved to _drawable-mdpi_, _drawable-hdpi_, _drawable-xhdpi_ and _drawable-xxhdpi_ 
 directories under the selected output directory. If these directories do not exist, 
 the script will create them.
  

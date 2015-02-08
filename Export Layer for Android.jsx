@@ -5,6 +5,12 @@
  * GitHub: https://github.com/rfreedman
  * Twitter: @greybeardedgeek
  * 
+ * ---------
+ * Modified by Julien Quéré - @juli1quere - http://sinplicity.fr : 
+ *  - Add the ability to specify the source file density,
+ *  - Add XXHDPI,
+ *  - Add the "automatic" option for the resize method.
+ * ---------
  * This script started as the 'Export for iOS' script, found at http://pastebin.com/12dHWYm8, 
  * and originally authored by Daniel Wood ( twitter: @loadedwino )
  *
@@ -27,6 +33,7 @@
  */
 // constants
 var ResizeMethod = {
+    AUTO: {name: 'Automatic', value: 'automatic'},
     NEARESTNEIGHBOUR: {name: 'Nearest Neighbour', value: 'Nrst'},
     BILINEAR: {name: 'Bilinear', value: 'Blnr'},
     BICUBIC: {name: 'Bicubic', value: 'Bcbc'},
@@ -34,11 +41,25 @@ var ResizeMethod = {
     BICUBICSHARPER: {name: 'Bicubic Sharper', value: 'bicubicSharper'}
 };
 var resizeMethodLookup = {};
+resizeMethodLookup[ResizeMethod.AUTO.name] = ResizeMethod.AUTO.value;
 resizeMethodLookup[ResizeMethod.NEARESTNEIGHBOUR.name] = ResizeMethod.NEARESTNEIGHBOUR.value;
 resizeMethodLookup[ResizeMethod.BILINEAR.name] = ResizeMethod.BILINEAR.value;
 resizeMethodLookup[ResizeMethod.BICUBIC.name] = ResizeMethod.BICUBIC.value;
 resizeMethodLookup[ResizeMethod.BICUBICSMOOTHER.name] = ResizeMethod.BICUBICSMOOTHER.value;
 resizeMethodLookup[ResizeMethod.BICUBICSHARPER.name] = ResizeMethod.BICUBICSHARPER.value;
+
+var OriginalDensity = {
+    MDPI: {name: 'MDPI', value: 1},
+    HDPI: {name: 'HDPI', value: 1.5},
+    XHDPI: {name: 'XHDPI', value: 2},
+    XXHDPI: {name: 'XXHDPI', value: 3}
+};
+
+var origalDensityLookup = {};
+origalDensityLookup[OriginalDensity.MDPI.name] = OriginalDensity.MDPI.value;
+origalDensityLookup[OriginalDensity.HDPI.name] = OriginalDensity.HDPI.value;
+origalDensityLookup[OriginalDensity.XHDPI.name] = OriginalDensity.XHDPI.value;
+origalDensityLookup[OriginalDensity.XXHDPI.name] = OriginalDensity.XXHDPI.value;
 
 var exportDialog;
 
@@ -48,7 +69,7 @@ function savePng(width, resizeMethod, scaleStyles, folderName, normalisedName, d
     resizeImage(UnitValue(width, "px"), resizeMethod, scaleStyles);
     outputFolder = Folder(folderName);
     if(!outputFolder.exists) outputFolder.create();
-    saveForWebPNG(dupDoc, outputFolder.fullName, normalisedName);	
+    saveForWebPNG(dupDoc, outputFolder.fullName, normalisedName);   
 }
 
 function saveForWebPNG(doc, outputFolderStr, filename)
@@ -78,12 +99,13 @@ function resizeImage(width, method, scaleStyles)
         action.putBoolean( stringIDToTypeID("scaleStyles"), true );
     
     action.putBoolean( charIDToTypeID("CnsP"), true );
-    action.putEnumerated( charIDToTypeID("Intr"), charIDToTypeID("Intp"), charIDToTypeID(method) );
-
+    if(method != ResizeMethod.AUTO.value) {
+         action.putEnumerated( charIDToTypeID("Intr"), charIDToTypeID("Intp"), charIDToTypeID(method) );
+    }
     executeAction( charIDToTypeID("ImgS"), action, DialogModes.NO );
 }
 
-function exportImages(baseName, resizeMethod, scaleStyles)
+function exportImages(baseName, resizeMethod, scaleStyles, originalDensity)
 {
     // select a folder to save to
     var folder = Folder.selectDialog(); 
@@ -121,17 +143,18 @@ function exportImages(baseName, resizeMethod, scaleStyles)
         // normalise name (basic normalisation lower case and hyphenated, modify or remove to taste)
         var normalisedName = dup.name.toLowerCase().replace(' ', '-');
         
-        // we assume that the original image is at mdpi size, so we'll scale as needed from there
-        var mdpiWidth = dup.width;  
+        var originalWidth = dup.width;
         
-        var ldpiWidth = mdpiWidth * 0.75;              
-        var hdpiWidth = mdpiWidth * 1.5;
-        var xhdpiWidth = mdpiWidth * 2;
+        var mdpiWidth = originalWidth * ( OriginalDensity.MDPI.value / originalDensity);              
+        var hdpiWidth = originalWidth *  ( OriginalDensity.HDPI.value / originalDensity);
+        var xhdpiWidth = originalWidth *  ( OriginalDensity.XHDPI.value / originalDensity);
+        var xxhdpiWidth = originalWidth *  ( OriginalDensity.XXHDPI.value / originalDensity);
+
 
         savePng(mdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-mdpi',  normalisedName, dup);
-        savePng(ldpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-ldpi',  normalisedName, dup);
         savePng(hdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-hdpi',  normalisedName, dup);
         savePng(xhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xhdpi', normalisedName, dup);
+        savePng(xxhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xxhdpi', normalisedName, dup);
 
         dup.close(SaveOptions.DONOTSAVECHANGES);
 
@@ -145,8 +168,9 @@ function okClickedHandler()
     var resizeMethod = resizeMethodLookup[exportDialog.methodOptions.selection.text];
     var scaleStyles = exportDialog.scaleStylesCheckBox.value;
     var baseName = exportDialog.namePanel.nameBox.text;
+    var originalDensity = origalDensityLookup[exportDialog.originalDensityOptions.selection.text];
     exportDialog.close();
-    exportImages(baseName, resizeMethod, scaleStyles);
+    exportImages(baseName, resizeMethod, scaleStyles, originalDensity);
 }
 
 exportDialog = new Window('dialog', 'Export Selected Layer for Android'); 
@@ -162,8 +186,14 @@ exportDialog.namePanel.nameBox = exportDialog.namePanel.add('edittext', undefine
 exportDialog.namePanel.nameBox.preferredSize = [160,20];
 exportDialog.namePanel.nameBox.text = defaultName;
 
-exportDialog.methodOptions = exportDialog.add('dropdownlist', undefined, [ResizeMethod.NEARESTNEIGHBOUR.name, ResizeMethod.BILINEAR.name, ResizeMethod.BICUBIC.name, ResizeMethod.BICUBICSMOOTHER.name, ResizeMethod.BICUBICSHARPER.name]);
-exportDialog.methodOptions.children[1].selected = true;
+exportDialog.add('statictext', undefined, 'Resize method: ');
+exportDialog.methodOptions = exportDialog.add('dropdownlist', undefined, [ResizeMethod.AUTO.name, ResizeMethod.NEARESTNEIGHBOUR.name, ResizeMethod.BILINEAR.name, ResizeMethod.BICUBIC.name, ResizeMethod.BICUBICSMOOTHER.name, ResizeMethod.BICUBICSHARPER.name]);
+exportDialog.methodOptions.children[0].selected = true;
+
+exportDialog.add('statictext', undefined, 'Orignal density: ');
+exportDialog.originalDensityOptions = exportDialog.add('dropdownlist', undefined, [OriginalDensity.MDPI.name, OriginalDensity.HDPI.name, OriginalDensity.XHDPI.name, OriginalDensity.XXHDPI.name], 'den');
+exportDialog.originalDensityOptions.children[2].selected = true;
+
 exportDialog.scaleStylesCheckBox = exportDialog.add('checkbox', undefined, 'Scale Styles');
 exportDialog.scaleStylesCheckBox.value = true;
 
