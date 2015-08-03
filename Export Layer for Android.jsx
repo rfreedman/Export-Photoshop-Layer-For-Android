@@ -1,34 +1,41 @@
-﻿/**
+/**
  * Export for Android Photoshop Script
  *
  * Author: Rich Freedman (greybeardedgeek.net)
  * GitHub: https://github.com/rfreedman
  * Twitter: @greybeardedgeek
- * 
+ *
  * ---------
- * Modified by Julien Quéré - @juli1quere - http://sinplicity.fr : 
+ * Modified by Julien Quéré - @juli1quere - http://sinplicity.fr :
  *  - Add the ability to specify the source file density,
  *  - Add XXHDPI,
  *  - Add the "automatic" option for the resize method.
  * ---------
- * This script started as the 'Export for iOS' script, found at http://pastebin.com/12dHWYm8, 
+ *
+ * ---------
+ * Modified by Aaron Bonham - @abonham :
+ * - Add the ability to choose between export all layers or just active
+ * - Add toggle for trim whitespace
+ * ---------
+ *
+ * This script started as the 'Export for iOS' script, found at http://pastebin.com/12dHWYm8,
  * and originally authored by Daniel Wood ( twitter: @loadedwino )
  *
  * I modified the iOS script to instead export the appropriate image sizes for Android.
- *  
+ *
  * This script is intended to be used on a photoshop document containing mdpi
- * artwork for Android. It will resize, trim and save the selected layer or group, into a 
- * directory you select using the layer name (normalised) for the file name. There are a  
+ * artwork for Android. It will resize, trim and save the selected layer or group, into a
+ * directory you select using the layer name (normalised) for the file name. There are a
  * couple of resizing options you can select such as the
  * resizing method and whether to scale styles or not. It does not alter your original
  * document in anyway.
  *
  * Images are saved to 'drawable-ldpi', 'drawable-mdpi', 'drawable-hdpi', and 'drawable-xhdpi'
- * directories under the selected output directory. If these directories do not exist, 
+ * directories under the selected output directory. If these directories do not exist,
  * the script will create them.
- * 
+ *
  * Original 'license':
- * Feel free to share/reuse/modify to your heart's content. 
+ * Feel free to share/reuse/modify to your heart's content.
  * Attribution would be nice but is not required.
  */
 // constants
@@ -69,7 +76,7 @@ function savePng(width, resizeMethod, scaleStyles, folderName, normalisedName, d
     resizeImage(UnitValue(width, "px"), resizeMethod, scaleStyles);
     outputFolder = Folder(folderName);
     if(!outputFolder.exists) outputFolder.create();
-    saveForWebPNG(dupDoc, outputFolder.fullName, normalisedName);   
+    saveForWebPNG(dupDoc, outputFolder.fullName, normalisedName);
 }
 
 function saveForWebPNG(doc, outputFolderStr, filename)
@@ -94,10 +101,10 @@ function resizeImage(width, method, scaleStyles)
 {
     var action = new ActionDescriptor();
     action.putUnitDouble( charIDToTypeID("Wdth"), charIDToTypeID("#Pxl"), width );
-    
+
     if(scaleStyles == true)
         action.putBoolean( stringIDToTypeID("scaleStyles"), true );
-    
+
     action.putBoolean( charIDToTypeID("CnsP"), true );
     if(method != ResizeMethod.AUTO.value) {
          action.putEnumerated( charIDToTypeID("Intr"), charIDToTypeID("Intp"), charIDToTypeID(method) );
@@ -105,62 +112,65 @@ function resizeImage(width, method, scaleStyles)
     executeAction( charIDToTypeID("ImgS"), action, DialogModes.NO );
 }
 
-function exportImages(baseName, resizeMethod, scaleStyles, originalDensity)
+function exportAllLayers(folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace)
 {
-    // select a folder to save to
-    var folder = Folder.selectDialog(); 
-    if(folder)
+    var doc = app.activeDocument;
+    for(var a=0;a<doc.layers.length;a++)
     {
-        // Save original units
-        var originalRulerUnits = app.preferences.rulerUnits ;
-        var originalTypeUnits = app.preferences.typeUnits ;
-
-        app.preferences.rulerUnits=Units.PIXELS;
-        app.preferences.typeUnits=TypeUnits.PIXELS;
-
-
-        // get currect document
-        var doc = app.activeDocument;
-
-        // create new document based on the current docs values except name which user 
-        var dup = app.documents.add(doc.width, doc.height, doc.resolution, baseName, NewDocumentMode.RGB, DocumentFill.TRANSPARENT);
-
-        // switch back to origal doc to allow duplicate
-        app.activeDocument = doc;
-
-        // duplicate the selected layer (only works for one) at place it in the new doc
-        doc.activeLayer.duplicate(dup);
-
-        // switch back to the new document
-        app.activeDocument = dup;
-
-        // trim the document so that all that appears is our element
-        dup.trim(TrimType.TRANSPARENT);
-
-        // adjust canvas size so that it is an even number of pixels (so scaling down fits on whole pixel)
-        dup.resizeCanvas(Math.ceil(dup.width/2)*2, Math.ceil(dup.height/2)*2, AnchorPosition.TOPLEFT);
-        
-        // normalise name (basic normalisation lower case and hyphenated, modify or remove to taste)
-        var normalisedName = dup.name.toLowerCase().replace(' ', '-');
-        
-        var originalWidth = dup.width;
-        
-        var mdpiWidth = originalWidth * ( OriginalDensity.MDPI.value / originalDensity);              
-        var hdpiWidth = originalWidth *  ( OriginalDensity.HDPI.value / originalDensity);
-        var xhdpiWidth = originalWidth *  ( OriginalDensity.XHDPI.value / originalDensity);
-        var xxhdpiWidth = originalWidth *  ( OriginalDensity.XXHDPI.value / originalDensity);
-
-
-        savePng(mdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-mdpi',  normalisedName, dup);
-        savePng(hdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-hdpi',  normalisedName, dup);
-        savePng(xhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xhdpi', normalisedName, dup);
-        savePng(xxhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xxhdpi', normalisedName, dup);
-
-        dup.close(SaveOptions.DONOTSAVECHANGES);
-
-        app.preferences.rulerUnits=originalRulerUnits;
-        app.preferences.typeUnits=originalTypeUnits;
+        exportImages(doc.layers[a], doc.layers[a].name, folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace);
     }
+}
+
+function exportSingleLayer(baseName, folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace)
+{
+    var doc = app.activeDocument;
+    var layer = doc.activeLayer;
+    exportImages(layer, baseName, folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace);
+}
+
+function exportImages(layer, baseName, folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace)
+{
+    // get currect document
+    var doc = app.activeDocument;
+
+    // create new document based on the current docs values except name which user
+    var dup = app.documents.add(doc.width, doc.height, doc.resolution, baseName, NewDocumentMode.RGB, DocumentFill.TRANSPARENT);
+
+    // switch back to original doc to allow duplicate
+    app.activeDocument = doc;
+
+    // duplicate the selected layer (only works for one) at place it in the new doc
+    layer.duplicate(dup);
+
+    // switch back to the new document
+    app.activeDocument = dup;
+
+    // trim the document so that all that appears is our element
+    if (trimWhiteSpace)
+    {
+        dup.trim(TrimType.TRANSPARENT);
+    }
+
+    // adjust canvas size so that it is an even number of pixels (so scaling down fits on whole pixel)
+    dup.resizeCanvas(Math.ceil(dup.width/2)*2, Math.ceil(dup.height/2)*2, AnchorPosition.TOPLEFT);
+
+    // normalise name (basic normalisation lower case and hyphenated, modify or remove to taste)
+    var normalisedName = dup.name.toLowerCase().replace(' ', '_');
+
+    var originalWidth = dup.width;
+
+    var mdpiWidth = originalWidth * ( OriginalDensity.MDPI.value / originalDensity);
+    var hdpiWidth = originalWidth *  ( OriginalDensity.HDPI.value / originalDensity);
+    var xhdpiWidth = originalWidth *  ( OriginalDensity.XHDPI.value / originalDensity);
+    var xxhdpiWidth = originalWidth *  ( OriginalDensity.XXHDPI.value / originalDensity);
+
+
+    savePng(mdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-mdpi',  normalisedName, dup);
+    savePng(hdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-hdpi',  normalisedName, dup);
+    savePng(xhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xhdpi', normalisedName, dup);
+    savePng(xxhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xxhdpi', normalisedName, dup);
+
+    dup.close(SaveOptions.DONOTSAVECHANGES);
 }
 
 function okClickedHandler()
@@ -169,11 +179,33 @@ function okClickedHandler()
     var scaleStyles = exportDialog.scaleStylesCheckBox.value;
     var baseName = exportDialog.namePanel.nameBox.text;
     var originalDensity = origalDensityLookup[exportDialog.originalDensityOptions.selection.text];
+    var trimWhiteSpace = exportDialog.trimWhiteSpaceCheckBox.value;
     exportDialog.close();
-    exportImages(baseName, resizeMethod, scaleStyles, originalDensity);
+
+    // select a folder to save to
+    var folder = Folder.selectDialog();
+    if (folder)
+    {
+        // Save original units
+        var originalRulerUnits = app.preferences.rulerUnits ;
+        var originalTypeUnits = app.preferences.typeUnits ;
+
+        app.preferences.rulerUnits=Units.PIXELS;
+        app.preferences.typeUnits=TypeUnits.PIXELS;
+
+        if (exportDialog.allLayersCheckBox.value == true) {
+            exportAllLayers(folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace);
+        }
+        else {
+            exportSingleLayer(baseName, folder, resizeMethod, scaleStyles, originalDensity, trimWhiteSpace);
+        }
+
+        app.preferences.rulerUnits=originalRulerUnits;
+        app.preferences.typeUnits=originalTypeUnits;
+    }
 }
 
-exportDialog = new Window('dialog', 'Export Selected Layer for Android'); 
+exportDialog = new Window('dialog', 'Export Selected Layer for Android');
 exportDialog.alignChildren = 'left';
 
 exportDialog.namePanel = exportDialog.add('panel', undefined, 'Base name');
@@ -192,10 +224,16 @@ exportDialog.methodOptions.children[0].selected = true;
 
 exportDialog.add('statictext', undefined, 'Orignal density: ');
 exportDialog.originalDensityOptions = exportDialog.add('dropdownlist', undefined, [OriginalDensity.MDPI.name, OriginalDensity.HDPI.name, OriginalDensity.XHDPI.name, OriginalDensity.XXHDPI.name], 'den');
-exportDialog.originalDensityOptions.children[2].selected = true;
+exportDialog.originalDensityOptions.children[3].selected = true;
 
 exportDialog.scaleStylesCheckBox = exportDialog.add('checkbox', undefined, 'Scale Styles');
 exportDialog.scaleStylesCheckBox.value = true;
+
+exportDialog.allLayersCheckBox = exportDialog.add('checkbox', undefined, 'Export All Layers');
+exportDialog.allLayersCheckBox.value = false;
+
+exportDialog.trimWhiteSpaceCheckBox = exportDialog.add('checkbox', undefined, 'Trim Whitespace');
+exportDialog.trimWhiteSpaceCheckBox.value = false;
 
 exportDialog.buttonGroup = exportDialog.add('group');
 exportDialog.buttonGroup.cancelButton = exportDialog.buttonGroup.add('button', undefined, 'Cancel');
