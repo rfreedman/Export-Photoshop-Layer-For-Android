@@ -11,6 +11,11 @@
  *  - Add XXHDPI,
  *  - Add the "automatic" option for the resize method.
  * ---------
+ * Modified by Brian Lee
+ * GitHub: https://github.com/tigerpenguin
+ * Twitter: @tig3rpenguin
+ *  - Add XXXHDPI
+ * ---------
  * This script started as the 'Export for iOS' script, found at http://pastebin.com/12dHWYm8, 
  * and originally authored by Daniel Wood ( twitter: @loadedwino )
  *
@@ -23,7 +28,8 @@
  * resizing method and whether to scale styles or not. It does not alter your original
  * document in anyway.
  *
- * Images are saved to 'drawable-ldpi', 'drawable-mdpi', 'drawable-hdpi', and 'drawable-xhdpi'
+ * Images are saved to 'drawable-mdpi', 'drawable-hdpi', 'drawable-xhdpi',
+ * 'drawable-xxhdpi', and 'drawable-xxxhdpi'
  * directories under the selected output directory. If these directories do not exist, 
  * the script will create them.
  * 
@@ -52,7 +58,8 @@ var OriginalDensity = {
     MDPI: {name: 'MDPI', value: 1},
     HDPI: {name: 'HDPI', value: 1.5},
     XHDPI: {name: 'XHDPI', value: 2},
-    XXHDPI: {name: 'XXHDPI', value: 3}
+    XXHDPI: {name: 'XXHDPI', value: 3},
+    XXXHDPI: {name: 'XXXHDPI', value: 4}
 };
 
 var origalDensityLookup = {};
@@ -60,6 +67,7 @@ origalDensityLookup[OriginalDensity.MDPI.name] = OriginalDensity.MDPI.value;
 origalDensityLookup[OriginalDensity.HDPI.name] = OriginalDensity.HDPI.value;
 origalDensityLookup[OriginalDensity.XHDPI.name] = OriginalDensity.XHDPI.value;
 origalDensityLookup[OriginalDensity.XXHDPI.name] = OriginalDensity.XXHDPI.value;
+origalDensityLookup[OriginalDensity.XXXHDPI.name] = OriginalDensity.XXXHDPI.value;
 
 var exportDialog;
 
@@ -149,12 +157,14 @@ function exportImages(baseName, resizeMethod, scaleStyles, originalDensity)
         var hdpiWidth = originalWidth *  ( OriginalDensity.HDPI.value / originalDensity);
         var xhdpiWidth = originalWidth *  ( OriginalDensity.XHDPI.value / originalDensity);
         var xxhdpiWidth = originalWidth *  ( OriginalDensity.XXHDPI.value / originalDensity);
+        var xxxhdpiWidth = originalWidth *  ( OriginalDensity.XXXHDPI.value / originalDensity);
 
 
         savePng(mdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-mdpi',  normalisedName, dup);
         savePng(hdpiWidth,  resizeMethod, scaleStyles, folder.fullName + '/drawable-hdpi',  normalisedName, dup);
         savePng(xhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xhdpi', normalisedName, dup);
         savePng(xxhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xxhdpi', normalisedName, dup);
+        savePng(xxxhdpiWidth, resizeMethod, scaleStyles, folder.fullName + '/drawable-xxxhdpi', normalisedName, dup);
 
         dup.close(SaveOptions.DONOTSAVECHANGES);
 
@@ -191,7 +201,7 @@ exportDialog.methodOptions = exportDialog.add('dropdownlist', undefined, [Resize
 exportDialog.methodOptions.children[0].selected = true;
 
 exportDialog.add('statictext', undefined, 'Orignal density: ');
-exportDialog.originalDensityOptions = exportDialog.add('dropdownlist', undefined, [OriginalDensity.MDPI.name, OriginalDensity.HDPI.name, OriginalDensity.XHDPI.name, OriginalDensity.XXHDPI.name], 'den');
+exportDialog.originalDensityOptions = exportDialog.add('dropdownlist', undefined, [OriginalDensity.MDPI.name, OriginalDensity.HDPI.name, OriginalDensity.XHDPI.name, OriginalDensity.XXHDPI.name, OriginalDensity.XXXHDPI.name], 'den');
 exportDialog.originalDensityOptions.children[2].selected = true;
 
 exportDialog.scaleStylesCheckBox = exportDialog.add('checkbox', undefined, 'Scale Styles');
