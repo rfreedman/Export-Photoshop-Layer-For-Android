@@ -11,8 +11,8 @@
  *  - Add XXHDPI,
  *  - Add the "automatic" option for the resize method.
  * ---------
- * This script started as the 'Export for iOS' script, found at http://pastebin.com/12dHWYm8, 
- * and originally authored by Daniel Wood ( twitter: @loadedwino )
+ * This script started as an 'Export for iOS' script, whose original author
+ * has requested to remain anonymous.
  *
  * I modified the iOS script to instead export the appropriate image sizes for Android.
  *  
